@@ -63,3 +63,65 @@ RUN  apk add --no-cache npm \
 ```
 
 When running the `cves` command with `--vex` all VEX statements that specify a `not_affected` status will be used to filter CVEs. The `--vex-author` options allows to select which VEX statement authors to _trust_.
+
+### Step 1 Setup
+1. git clone https://github.com/docker/scout-demo-service.git
+2. cd scout-demo-service
+3. docker login
+4. docker build --push -t ideas/scout-demo:v1 .
+### Step 2 Enable Docker Scout
+5. docker scout enroll ideas
+6. docker scout repo enable --org ideas ideas/scout-demo
+### Step 3 Analyze image vulnerabilities
+7. docker scout cves --only-package express
+7+ Learn more about the docker scout cves command in the CLI reference documentation
+
+![alt text](step3.png)
+
+### Step 4 Fix application vulnerabilities
+8. Update the package.json  [ "express": "4.17.1" to "express": "4.17.3" ]
+9. docker build --push -t ideas/scout-demo:v2 .
+10. scout cves --only-package express
+
+### Step 5 Evaluate policy compliance
+11. docker scout config organization ideas
+11+ PS E:\repo\scout-demo-service> docker scout config organization ideas
+    i New version 1.16.1 available (installed version is 1.15.1) at https://github.com/docker/scout-cli
+          v Successfully set organization to ideas
+12. docker scout quickview
+    
+![alt text](step5.png)
+  
+```
+  Target               │  local://ideas/scout-demo:v1  │    2C    18H     9M     4L     1?
+    digest             │  c28dde049854                 │
+  Base image           │  alpine:3                     │    2C    15H     7M     0L     1?
+  Refreshed base image │  alpine:3                     │    0C     0H     0M     0L
+                       │                               │    -2    -15     -7            -1
+  Updated base image   │  alpine:3.20                  │    0C     0H     0M     0L
+                       │                               │    -2    -15     -7            -1
+
+Policy status  FAILED  (2/7 policies met, 2 missing data)
+
+  Status │                     Policy                     │           Results
+─────────┼────────────────────────────────────────────────┼──────────────────────────────
+    !    │ No default non-root user found                 │
+    v    │ No AGPL v3 licenses                            │    0 packages
+    !    │ Fixable critical or high vulnerabilities found │    2C    18H     0M     0L
+    v    │ No high-profile vulnerabilities                │    0C     0H     0M     0L
+    ?    │ No outdated base images                        │    No data
+         │                                                │    Learn more ↗
+    ?    │ No unapproved base images                      │    No data
+    !    │ Missing supply chain attestation(s)            │    2 deviations
+
+What's next:
+    View policy violations → docker scout policy local://ideas/scout-demo:v1 --org ideas
+    View vulnerabilities → docker scout cves local://ideas/scout-demo:v1
+    View base image update recommendations → docker scout recommendations local://ideas/scout-demo:v1
+    Compare with the latest in the registry → docker scout compare --to-latest local://ideas/scout-demo:v1 --org ideas
+```
+
+### Step 6: Improve compliance
+Add
+    USER appuser 
+    to Dockerfile after the EXPOSE 3000

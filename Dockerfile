@@ -21,3 +21,4 @@ COPY . /app
 CMD ["node","/app/app.js"]
 
 EXPOSE 3000
+USER appuser
